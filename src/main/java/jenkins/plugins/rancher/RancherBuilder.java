@@ -50,6 +50,7 @@ public class RancherBuilder extends Builder implements SimpleBuildStep {
     private final String service;
     private final String image;
     private final boolean confirm;
+    private final boolean startFirst;
     private final String ports;
     private final String environments;
     private int timeout = 50;
@@ -59,22 +60,23 @@ public class RancherBuilder extends Builder implements SimpleBuildStep {
     @DataBoundConstructor
     public RancherBuilder(
             String environmentId, String endpoint, String credentialId, String service,
-            String image, boolean confirm, String ports, String environments, int timeout) {
+            String image, boolean confirm, boolean startFirst, String ports, String environments, int timeout) {
         this.environmentId = environmentId;
         this.endpoint = endpoint;
         this.credentialId = credentialId;
         this.service = service;
         this.image = image;
         this.confirm = confirm;
+        this.startFirst = startFirst;
         this.ports = ports;
         this.environments = environments;
         this.timeout = timeout;
     }
 
     protected static RancherBuilder newInstance(String environmentId, String endpoint, String credentialId, String service,
-                                                String image, boolean confirm, String ports, String environments, int timeout,
+                                                String image, boolean confirm, boolean startFirst, String ports, String environments, int timeout,
                                                 RancherClient rancherClient, CredentialsUtil credentialsUtil) {
-        RancherBuilder rancherBuilder = new RancherBuilder(environmentId, endpoint, credentialId, service, image, confirm, ports, environments, timeout);
+        RancherBuilder rancherBuilder = new RancherBuilder(environmentId, endpoint, credentialId, service, image, confirm, startFirst, ports, environments, timeout);
         rancherBuilder.setCredentialsUtil(credentialsUtil);
         rancherBuilder.setRancherClient(rancherClient);
         return rancherBuilder;
@@ -161,7 +163,17 @@ public class RancherBuilder extends Builder implements SimpleBuildStep {
             launchConfig.setPorts(Arrays.asList(ports.split(",")));
         }
 
-        inServiceStrategy.setStartFirst(launchConfig.getPorts().isEmpty());
+        if (startFirst && launchConfig.getPorts().isEmpty() ) {
+            inServiceStrategy.setStartFirst(startFirst);
+
+        }
+        else if (startFirst && !(launchConfig.getPorts().isEmpty())){
+            throw new AbortException("Ports can not be in use with start with stop service.");
+        }
+        else { 
+            inServiceStrategy.setStartFirst(startFirst);
+        }
+        // inServiceStrategy.setStartFirst(launchConfig.getPorts().isEmpty());
 
         inServiceStrategy.setLaunchConfig(launchConfig);
         serviceUpgrade.setInServiceStrategy(inServiceStrategy);
@@ -285,7 +297,7 @@ public class RancherBuilder extends Builder implements SimpleBuildStep {
     public boolean isConfirm() {
         return confirm;
     }
-
+      
     public String getEndpoint() {
         return endpoint;
     }

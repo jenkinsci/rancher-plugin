@@ -1,6 +1,8 @@
 Jenkins Rancher Plugin
 ======================
 
+> Note: This plugin only support Rancher1
+
 Enables Jenkins to deploy or upgrade Rancher stack service instance
 
 Rancher is an open source software platform that enables organizations to run containers in production. With Rancher, organizations no longer have to build a container services platform from scratch using a distinct set of open source technologies. Rancher supplies the entire software stack needed to manage containers in production.

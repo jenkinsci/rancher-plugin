@@ -48,7 +48,7 @@ public class RancherBuilderTest {
         rancherClient = mock(RancherClient.class);
 
         rancherBuilder = RancherBuilder.newInstance(
-                "1a7", "http://localhost:8080/v2-beta", "credentialId", "stack/service", "nginx", true, "", "", 10,
+                "1a7", "http://localhost:8080/v2-beta", "credentialId", "stack/service", "nginx", true, false, "", "", 50,
                 rancherClient, credentialsUtil);
     }
 

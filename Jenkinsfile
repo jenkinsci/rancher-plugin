@@ -5,11 +5,11 @@ node {
   }
 
   stage('Docker Pull') {
-    sh 'docker pull dgroup/java8-gradle'
+    sh 'docker pull gradle:jdk8'
   }
 
   stage ('Build') {
-    sh 'docker run --rm -v ${WORKSPACE}:/code --workdir /code dgroup/java8-gradle ./gradlew jpi'
+    sh 'docker run --rm -v ${WORKSPACE}:/code --workdir /code gradle:jdk8 ./gradlew jpi'
   }
 
 }

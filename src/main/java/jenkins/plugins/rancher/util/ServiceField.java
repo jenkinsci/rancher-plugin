@@ -13,12 +13,12 @@ public class ServiceField {
             throw new AbortException("ServerName is Empty");
         }
 
-        String[] stackNameAndServiceName = service.split("/");
-        if (stackNameAndServiceName.length != 2) {
-            throw new AbortException("ServerName is Empty");
+        int firstSlashPosition = service.indexOf("/");
+        if (firstSlashPosition == -1) {
+            throw new AbortException("ServerName should be has StackName/ServiceName");
         }
-        this.stackName = stackNameAndServiceName[0].trim();
-        this.serviceName = stackNameAndServiceName[1].trim();
+        this.stackName = service.substring(0, firstSlashPosition);
+        this.serviceName = service.substring(firstSlashPosition + 1);
     }
 
     public String getStackName() {

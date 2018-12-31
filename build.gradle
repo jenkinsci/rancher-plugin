@@ -16,7 +16,7 @@ apply plugin: 'java'
 apply plugin: 'org.jenkins-ci.jpi'
 
 group = 'org.jenkins-ci.plugins'
-version = '1.0.13-SNAPSHOT'
+version = '1.0.14-SNAPSHOT'
 description = 'rancher plugin'
 
 repositories {

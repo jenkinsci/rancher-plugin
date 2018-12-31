@@ -139,3 +139,8 @@ test the plugin.
 ### Version 1.0.10 (April 25 2018)
 
 * Fixed issues.
+
+### Version 1.0.13 (Dec 31 2018 )
+
+* Support start before stop options
+* Fixed network config missing

@@ -33,8 +33,15 @@ public class LaunchConfig {
 
     private boolean tty = true;
 
+    private String networkMode;
+
     private String requestedHostId;
     private String requestedIpAddress;
+
+
+    private String domainName;
+    private List<String> dnsSearch;
+    private List<String> dns;
 
     private List<Secret> secrets = new ArrayList<>();
 
@@ -204,5 +211,45 @@ public class LaunchConfig {
 
     public void setRequestedHostId(String requestedHostId) {
         this.requestedHostId = requestedHostId;
+    }
+
+    public String getNetworkMode() {
+        return networkMode;
+    }
+
+    public void setNetworkMode(String networkMode) {
+        this.networkMode = networkMode;
+    }
+
+    public String getRequestedIpAddress() {
+        return requestedIpAddress;
+    }
+
+    public void setRequestedIpAddress(String requestedIpAddress) {
+        this.requestedIpAddress = requestedIpAddress;
+    }
+
+    public String getDomainName() {
+        return domainName;
+    }
+
+    public void setDomainName(String domainName) {
+        this.domainName = domainName;
+    }
+
+    public List<String> getDnsSearch() {
+        return dnsSearch;
+    }
+
+    public void setDnsSearch(List<String> dnsSearch) {
+        this.dnsSearch = dnsSearch;
+    }
+
+    public List<String> getDns() {
+        return dns;
+    }
+
+    public void setDns(List<String> dns) {
+        this.dns = dns;
     }
 }

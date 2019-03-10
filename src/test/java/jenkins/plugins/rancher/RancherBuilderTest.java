@@ -4,10 +4,8 @@ import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.Run;
 import hudson.model.TaskListener;
-import jenkins.plugins.rancher.entity.Service;
-import jenkins.plugins.rancher.entity.Services;
-import jenkins.plugins.rancher.entity.Stack;
-import jenkins.plugins.rancher.entity.Stacks;
+import jenkins.plugins.rancher.action.ServiceUpgrade;
+import jenkins.plugins.rancher.entity.*;
 import jenkins.plugins.rancher.util.CredentialsUtil;
 import org.junit.Before;
 import org.junit.Test;
@@ -15,10 +13,11 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Optional;
 
+import static jenkins.plugins.rancher.RancherBuilder.ACTIVE;
+import static jenkins.plugins.rancher.RancherBuilder.UPGRADED;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.*;
@@ -84,4 +83,43 @@ public class RancherBuilderTest {
         verify(rancherClient, timeout(1)).createService(any(Service.class), anyString(), anyString());
     }
 
+    @Test
+    public void should_upgrade_and_finish_stack_and_service_when_both_of_them_are_present() throws IOException, InterruptedException {
+        // given
+        Stacks existingStacks = new Stacks();
+        Stack stack = new Stack();
+        stack.setName("stack");
+        existingStacks.setData(Collections.singletonList(stack));
+        when(rancherClient.stacks(anyString())).thenReturn(Optional.of(existingStacks));
+
+        Services upgradedServices = new Services();
+        Service upgradedService = makeTestService(UPGRADED);
+        upgradedServices.setData(Collections.singletonList(upgradedService));
+
+        Services activeServices = new Services();
+        Service activeService = makeTestService(ACTIVE);
+        activeServices.setData(Collections.singletonList(activeService));
+
+        when(rancherClient.services(anyString(), anyString())).thenReturn(Optional.of(activeServices));
+        when(rancherClient.service(anyString(), anyString())).thenReturn(Optional.of(activeService), Optional.of(upgradedService), Optional.of(activeService));
+
+        when(rancherClient.upgradeService(anyString(), anyString(), any(ServiceUpgrade.class))).thenReturn(Optional.of(upgradedService));
+
+        when(rancherClient.finishUpgradeService(anyString(), anyString())).thenReturn(Optional.of(activeService));
+
+        // when
+        rancherBuilder.perform(build, filePath, launcher, listener);
+
+        // then
+        verify(rancherClient, timeout(1)).upgradeService(anyString(), anyString(), any(ServiceUpgrade.class));
+        verify(rancherClient, timeout(1)).finishUpgradeService(anyString(), anyString());
+    }
+
+    private Service makeTestService(String state) {
+        Service service = new Service();
+        service.setName("service");
+        service.setState(state);
+        service.setLaunchConfig(mock(LaunchConfig.class));
+        return service;
+    }
 }

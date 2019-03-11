@@ -41,16 +41,19 @@ import static jenkins.plugins.rancher.RancherBuilder.ACTIVE;
 import static jenkins.plugins.rancher.RancherBuilder.UPGRADED;
 
 public class RancherUpgradeBuilder extends AbstractRancherBuilder {
+    public static final String ROLLBACK_ACTION = "rollback";
+    private final String finishAction;
 
     @DataBoundConstructor
     public RancherUpgradeBuilder(
-            String environmentId, String endpoint, String credentialId, String service, int timeout) {
+            String environmentId, String endpoint, String credentialId, String service, String finishAction, int timeout) {
         super(environmentId, endpoint, credentialId, service, timeout);
+        this.finishAction = finishAction;
     }
 
     protected static RancherUpgradeBuilder newInstance(String environmentId, String endpoint, String credentialId, String service,
-                                                       int timeout, RancherClient rancherClient, CredentialsUtil credentialsUtil) {
-        RancherUpgradeBuilder rancherBuilder = new RancherUpgradeBuilder(environmentId, endpoint, credentialId, service, timeout);
+                                                       String finishAction, int timeout, RancherClient rancherClient, CredentialsUtil credentialsUtil) {
+        RancherUpgradeBuilder rancherBuilder = new RancherUpgradeBuilder(environmentId, endpoint, credentialId, service,finishAction, timeout);
         rancherBuilder.setCredentialsUtil(credentialsUtil);
         rancherBuilder.setRancherClient(rancherClient);
         return rancherBuilder;
@@ -67,7 +70,7 @@ public class RancherUpgradeBuilder extends AbstractRancherBuilder {
         String service = Parser.paraser(this.getService(), buildEnvironments);
         ServiceField serviceField = new ServiceField(service);
 
-        listener.getLogger().printf("Confirm upgraded service [%s] to rancher environment [%s/projects/%s]%n", service, endpoint, envid);
+        listener.getLogger().printf("Finish[%s] upgraded service [%s] to rancher environment [%s/projects/%s]%n", finishAction, service, endpoint, envid);
 
         Stack stack = getStack(listener, serviceField, rancherClient, false);
         Optional<Services> services = rancherClient.services(envid, stack.getId());
@@ -82,7 +85,11 @@ public class RancherUpgradeBuilder extends AbstractRancherBuilder {
             if (!UPGRADED.equalsIgnoreCase(state)) {
                 throw new AbortException("Before confirming service the service instance state should be 'UPGRADED'");
             }
-            rancherClient.finishUpgradeService(environmentId, serviceInstance.get().getId());
+            if (ROLLBACK_ACTION.equalsIgnoreCase(finishAction)) {
+                rancherClient.rollbackUpgradeService(environmentId, serviceInstance.get().getId());
+            } else {
+                rancherClient.finishUpgradeService(environmentId, serviceInstance.get().getId());
+            }
             waitUntilServiceStateIs(serviceInstance.get().getId(), ACTIVE, listener);
         } else {
             throw new AbortException(String.format("Service [%s] does not exist.", service));

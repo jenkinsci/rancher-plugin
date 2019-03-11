@@ -60,4 +60,8 @@ public class RancherClient extends HttpClient {
         return Optional.ofNullable(post(String.format("/projects/%s/services/%s/?action=finishupgrade", environmentId, serviceId), Service.class));
     }
 
+    public Optional<Service> rollbackUpgradeService(String environmentId, String serviceId) throws IOException {
+        return Optional.ofNullable(post(String.format("/projects/%s/services/%s/?action=rollback", environmentId, serviceId), Service.class));
+    }
+
 }

@@ -17,6 +17,7 @@ import java.util.Optional;
 
 import static jenkins.plugins.rancher.RancherBuilder.ACTIVE;
 import static jenkins.plugins.rancher.RancherBuilder.UPGRADED;
+import static jenkins.plugins.rancher.RancherUpgradeBuilder.ROLLBACK_ACTION;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.*;
 
@@ -45,12 +46,12 @@ public class RancherUpgradeBuilderTest {
         rancherClient = mock(RancherClient.class);
 
         rancherUpgradeBuilder = RancherUpgradeBuilder.newInstance(
-                "1a7", "http://localhost:8080/v2-beta", "credentialId", "stack/service", 50,
-                rancherClient, credentialsUtil);
+                "1a7", "http://localhost:8080/v2-beta", "credentialId", "stack/service",
+                ROLLBACK_ACTION, 50, rancherClient, credentialsUtil);
     }
 
     @Test
-    public void should_confirm_service() throws IOException, InterruptedException {
+    public void should_rollback_service() throws IOException, InterruptedException {
         // given
         Stacks existingStacks = new Stacks();
         Stack stack = new Stack();
@@ -69,13 +70,13 @@ public class RancherUpgradeBuilderTest {
         when(rancherClient.services(anyString(), anyString())).thenReturn(Optional.of(upgradedServices));
         when(rancherClient.service(anyString(), anyString())).thenReturn(Optional.of(upgradedService), Optional.of(activeService));
 
-        when(rancherClient.finishUpgradeService(anyString(), anyString())).thenReturn(Optional.of(activeService));
+        when(rancherClient.rollbackUpgradeService(anyString(), anyString())).thenReturn(Optional.of(activeService));
 
         // when
         rancherUpgradeBuilder.perform(build, filePath, launcher, listener);
 
         //then
-        verify(rancherClient,timeout(1)).finishUpgradeService(anyString(), anyString());
+        verify(rancherClient,timeout(1)).rollbackUpgradeService(anyString(), anyString());
 
     }
     private Service makeTestService(String state) {

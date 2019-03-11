@@ -17,6 +17,12 @@
 
      <f:section title="${%config.advancedOptions}">
         <f:advanced >
+            <f:entry title="${%rancher.finishAction}" field="finishAction" default="confirm">
+                <select name="finishAction">
+                    <option value="confirm">Confirm</option>
+                    <option value="rollback">Rollback</option>
+                </select>
+            </f:entry>
            <f:entry title="${%rancher.timeout}" field="timeout">
             <f:number default="50"/>
            </f:entry>

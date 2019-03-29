@@ -10,7 +10,7 @@
     <artifactId>rancher-plugin</artifactId>
     <packaging>hpi</packaging>
     <name>Rancher-1.x Plugin</name>
-    <version>1.0.14-SNAPSHOT</version>
+    <version>1.0.14</version>
     <url>http://wiki.jenkins-ci.org/display/JENKINS/Rancher+Plugin</url>
 
     <properties>

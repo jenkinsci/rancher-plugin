@@ -32,7 +32,7 @@ public class RancherClient extends HttpClient {
     }
 
     public Optional<Stacks> stacks(String environmentId) throws IOException {
-        return Optional.ofNullable(get("/projects/" + environmentId + "/stacks", Stacks.class));
+        return Optional.ofNullable(get("/projects/" + environmentId + "/stacks?limit=1000", Stacks.class));
     }
 
     public Optional<Services> services(String envId, String stackId) throws IOException {

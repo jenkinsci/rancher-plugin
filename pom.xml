@@ -1,0 +1,104 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.jenkins-ci.plugins</groupId>
+        <artifactId>plugin</artifactId>
+        <version>3.40</version>
+        <relativePath/>
+    </parent>
+    <artifactId>rancher-plugin</artifactId>
+    <packaging>hpi</packaging>
+    <name>Rancher-1.x Plugin</name>
+    <version>1.0.14-SNAPSHOT</version>
+    <url>http://wiki.jenkins-ci.org/display/JENKINS/Rancher+Plugin</url>
+
+    <properties>
+        <java.level>8</java.level>
+        <jenkins.version>2.60.3</jenkins.version>
+        <lombok.version>1.16.12</lombok.version>
+        <no-test-jar>false</no-test-jar>
+    </properties>
+
+    <scm>
+        <connection>scm:git:git://github.com/jenkinsci/rancher-plugin.git</connection>
+        <developerConnection>scm:git:git@github.com:jenkinsci/rancher-plugin.git
+        </developerConnection>
+        <url>http://github.com/jenkinsci/rancher-pluginn</url>
+        <tag>HEAD</tag>
+    </scm>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>credentials</artifactId>
+            <version>2.1.14</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-codec</groupId>
+            <artifactId>commons-codec</artifactId>
+            <version>1.10</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.8.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>2.8.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <version>2.8.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>plain-credentials</artifactId>
+            <version>1.4</version>
+        </dependency>
+    </dependencies>
+
+    <developers>
+        <developer>
+            <id>seanly</id>
+            <name>Sean Ly</name>
+            <email>seanly@aliyun.com</email>
+            <timezone>-8</timezone>
+        </developer>
+    </developers>
+    <repositories>
+        <repository>
+            <id>repo.jenkins-ci.org</id>
+            <url>https://repo.jenkins-ci.org/public/</url>
+        </repository>
+    </repositories>
+    <pluginRepositories>
+        <pluginRepository>
+            <id>repo.jenkins-ci.org</id>
+            <url>https://repo.jenkins-ci.org/public/</url>
+        </pluginRepository>
+    </pluginRepositories>
+
+    <profiles>
+        <profile>
+            <id>Java 8</id>
+            <activation>
+                <jdk>1.8</jdk>
+            </activation>
+            <properties>
+                <additionalparam>-Xdoclint:none</additionalparam>
+            </properties>
+        </profile>
+    </profiles>
+</project>
+
+

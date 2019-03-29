@@ -22,6 +22,7 @@ import jenkins.plugins.rancher.util.EnvironmentParser;
 import jenkins.plugins.rancher.util.Parser;
 import jenkins.plugins.rancher.util.ServiceField;
 import jenkins.tasks.SimpleBuildStep;
+import lombok.Getter;
 import net.sf.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.Symbol;
@@ -43,16 +44,25 @@ public class RancherBuilder extends Builder implements SimpleBuildStep {
     public static final String INACTIVE = "inactive";
     public static final int DEFAULT_TIMEOUT = 50;
 
+    @Getter
     private final String environmentId;
+    @Getter
     private final String endpoint;
+    @Getter
     private final String credentialId;
-
+    @Getter
     private final String service;
+    @Getter
     private final String image;
+    @Getter
     private final boolean confirm;
+    @Getter
     private final boolean startFirst;
+    @Getter
     private final String ports;
+    @Getter
     private final String environments;
+    @Getter
     private int timeout = 50;
     private RancherClient rancherClient;
     private CredentialsUtil credentialsUtil;
@@ -288,38 +298,6 @@ public class RancherBuilder extends Builder implements SimpleBuildStep {
             listener.getLogger().println(e.getMessage());
         }
         return envs;
-    }
-
-    public String getEnvironmentId() {
-        return environmentId;
-    }
-
-    public boolean isConfirm() {
-        return confirm;
-    }
-      
-    public String getEndpoint() {
-        return endpoint;
-    }
-
-    public String getEnvironments() {
-        return environments;
-    }
-
-    public String getImage() {
-        return image;
-    }
-
-    public String getPorts() {
-        return ports;
-    }
-
-    public String getService() {
-        return service;
-    }
-
-    public String getCredentialId() {
-        return credentialId;
     }
 
     public int getTimeout() {

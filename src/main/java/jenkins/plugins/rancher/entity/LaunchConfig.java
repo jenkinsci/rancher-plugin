@@ -45,6 +45,9 @@ public class LaunchConfig {
 
     private List<Secret> secrets = new ArrayList<>();
 
+    private Long memory;
+    private Long memoryReservation;
+
     public InstanceHealthCheck getHealthCheck() {
         return healthCheck;
     }
@@ -251,5 +254,21 @@ public class LaunchConfig {
 
     public void setDns(List<String> dns) {
         this.dns = dns;
+    }
+
+    public Long getMemory() {
+        return memory;
+    }
+
+    public void setMemory(Long memory) {
+        this.memory = memory;
+    }
+
+    public Long getMemoryReservation() {
+        return memoryReservation;
+    }
+
+    public void setMemoryReservation(Long memoryReservation) {
+        this.memoryReservation = memoryReservation;
     }
 }

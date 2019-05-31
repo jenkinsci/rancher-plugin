@@ -1,10 +1,12 @@
 package jenkins.plugins.rancher;
 
-
 import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.google.common.base.Strings;
-import hudson.*;
+import hudson.AbortException;
+import hudson.Extension;
+import hudson.FilePath;
+import hudson.Launcher;
 import hudson.model.AbstractProject;
 import hudson.model.Run;
 import hudson.model.TaskListener;
@@ -13,17 +15,14 @@ import hudson.tasks.Builder;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
-import jenkins.plugins.rancher.action.InServiceStrategy;
-import jenkins.plugins.rancher.action.ServiceUpgrade;
-import jenkins.plugins.rancher.entity.*;
+import jenkins.plugins.rancher.entity.Environment;
+import jenkins.plugins.rancher.entity.Service;
+import jenkins.plugins.rancher.entity.Services;
 import jenkins.plugins.rancher.entity.Stack;
 import jenkins.plugins.rancher.util.CredentialsUtil;
-import jenkins.plugins.rancher.util.EnvironmentParser;
 import jenkins.plugins.rancher.util.Parser;
 import jenkins.plugins.rancher.util.ServiceField;
-import jenkins.tasks.SimpleBuildStep;
 import net.sf.json.JSONObject;
-import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
@@ -34,49 +33,36 @@ import javax.servlet.ServletException;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
-public class RancherBuilder extends AbstractRancherBuilder {
+import static jenkins.plugins.rancher.RancherBuilder.ACTIVE;
+import static jenkins.plugins.rancher.RancherBuilder.UPGRADED;
 
-    public static final String UPGRADED = "upgraded";
-    public static final String ACTIVE = "active";
-    public static final String INACTIVE = "inactive";
-    public static final int DEFAULT_TIMEOUT = 50;
-
-    private final String image;
-    private final boolean confirm;
-    private final boolean startFirst;
-    private final String ports;
-    private final String environments;
+public class RancherUpgradeBuilder extends AbstractRancherBuilder {
+    public static final String ROLLBACK_ACTION = "rollback";
+    private final String finishAction;
 
     @DataBoundConstructor
-    public RancherBuilder(
-            String environmentId, String endpoint, String credentialId, String service,
-            String image, boolean confirm, boolean startFirst, String ports, String environments, int timeout) {
-        super(environmentId, endpoint, credentialId,service, timeout);
-        this.image = image;
-        this.confirm = confirm;
-        this.startFirst = startFirst;
-        this.ports = ports;
-        this.environments = environments;
+    public RancherUpgradeBuilder(
+            String environmentId, String endpoint, String credentialId, String service, String finishAction, int timeout) {
+        super(environmentId, endpoint, credentialId, service, timeout);
+        this.finishAction = finishAction;
     }
 
-    protected static RancherBuilder newInstance(String environmentId, String endpoint, String credentialId, String service,
-                                                String image, boolean confirm, boolean startFirst, String ports, String environments, int timeout,
-                                                RancherClient rancherClient, CredentialsUtil credentialsUtil) {
-        RancherBuilder rancherBuilder = new RancherBuilder(environmentId, endpoint, credentialId, service, image, confirm, startFirst, ports, environments, timeout);
+    protected static RancherUpgradeBuilder newInstance(String environmentId, String endpoint, String credentialId, String service,
+                                                       String finishAction, int timeout, RancherClient rancherClient, CredentialsUtil credentialsUtil) {
+        RancherUpgradeBuilder rancherBuilder = new RancherUpgradeBuilder(environmentId, endpoint, credentialId, service,finishAction, timeout);
         rancherBuilder.setCredentialsUtil(credentialsUtil);
         rancherBuilder.setRancherClient(rancherClient);
         return rancherBuilder;
     }
 
+
     @Override
     public void perform(@Nonnull Run<?, ?> build, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws InterruptedException, IOException {
-
         Map<String, String> buildEnvironments = getBuildEnvs(build, listener);
-        Map<String, Object> environments = this.customEnvironments(Parser.paraser(this.environments, buildEnvironments));
-
-        String dockerUUID = String.format("docker:%s", Parser.paraser(image, buildEnvironments));
 
         String envid=Parser.paraser(getEnvironmentId(), buildEnvironments);
         initializeClient(Parser.paraser(endpoint, buildEnvironments));
@@ -84,109 +70,39 @@ public class RancherBuilder extends AbstractRancherBuilder {
         String service = Parser.paraser(this.getService(), buildEnvironments);
         ServiceField serviceField = new ServiceField(service);
 
-        listener.getLogger().printf("Deploy/Upgrade image[%s] to service [%s] to rancher environment [%s/projects/%s]%n", dockerUUID, service, endpoint, envid);
+        listener.getLogger().printf("Finish[%s] upgraded service [%s] to rancher environment [%s/projects/%s]%n", finishAction, service, endpoint, envid);
 
-        Stack stack = getStack(listener, serviceField, rancherClient, true);
+        Stack stack = getStack(listener, serviceField, rancherClient, false);
         Optional<Services> services = rancherClient.services(envid, stack.getId());
         if (!services.isPresent()) {
             throw new AbortException("Error happen when fetch stack<" + stack.getName() + "> services");
         }
-
         Optional<Service> serviceInstance = services.get().getData().stream().filter(s -> s.getName().equals(serviceField.getServiceName())).findAny();
+
         if (serviceInstance.isPresent()) {
-            upgradeService(serviceInstance.get(), dockerUUID, listener, environments);
+            String state = serviceInstance.get().getState();
+            listener.getLogger().printf("service %s current state is %s%n", service, state);
+            if (!UPGRADED.equalsIgnoreCase(state)) {
+                throw new AbortException("Before confirming service the service instance state should be 'UPGRADED'");
+            }
+            if (ROLLBACK_ACTION.equalsIgnoreCase(finishAction)) {
+                rancherClient.rollbackUpgradeService(environmentId, serviceInstance.get().getId());
+            } else {
+                rancherClient.finishUpgradeService(environmentId, serviceInstance.get().getId());
+            }
+            waitUntilServiceStateIs(serviceInstance.get().getId(), ACTIVE, listener);
         } else {
-            createService(stack, serviceField.getServiceName(), dockerUUID, listener, environments);
+            throw new AbortException(String.format("Service [%s] does not exist.", service));
         }
     }
 
-    private void upgradeService(Service service, String dockerUUID, TaskListener listener, Map<String, Object> environments) throws IOException {
-        listener.getLogger().println("Upgrading service instance");
-        checkServiceState(service, listener);
-        ServiceUpgrade serviceUpgrade = new ServiceUpgrade();
-        InServiceStrategy inServiceStrategy = new InServiceStrategy();
-
-        LaunchConfig launchConfig = service.getLaunchConfig();
-        launchConfig.setImageUuid(dockerUUID);
-        launchConfig.getEnvironment().putAll(environments);
-
-        if (!Strings.isNullOrEmpty(ports)) {
-            launchConfig.setPorts(Arrays.asList(ports.split(",")));
-        }
-
-        if (startFirst && launchConfig.getPorts().isEmpty() ) {
-            inServiceStrategy.setStartFirst(startFirst);
-
-        }
-        else if (startFirst && !(launchConfig.getPorts().isEmpty())){
-            throw new AbortException("Ports can not be in use with start with stop service.");
-        }
-        else { 
-            inServiceStrategy.setStartFirst(startFirst);
-        }
-        // inServiceStrategy.setStartFirst(launchConfig.getPorts().isEmpty());
-
-        inServiceStrategy.setLaunchConfig(launchConfig);
-        serviceUpgrade.setInServiceStrategy(inServiceStrategy);
-        Optional<Service> serviceInstance = rancherClient.upgradeService(getEnvironmentId(), service.getId(), serviceUpgrade);
-        if (!serviceInstance.isPresent()) {
-            throw new AbortException("upgrade service error");
-        }
-
-        waitUntilServiceStateIs(serviceInstance.get().getId(), UPGRADED, listener);
-
-        if (!confirm) {
-            return;
-        }
-
-        rancherClient.finishUpgradeService(environmentId, serviceInstance.get().getId());
-        waitUntilServiceStateIs(serviceInstance.get().getId(), ACTIVE, listener);
+    public String getFinishAction() {
+        return finishAction;
     }
 
-    private void createService(Stack stack, String serviceName, String dockerUUID, TaskListener listener, Map<String, Object> environments) throws IOException {
-        listener.getLogger().println("Creating service instance");
-        Service service = new Service();
-        service.setName(serviceName);
-        LaunchConfig launchConfig = new LaunchConfig();
-        launchConfig.setImageUuid(dockerUUID);
-        launchConfig.setEnvironment(environments);
-        if (!Strings.isNullOrEmpty(ports)) {
-            launchConfig.setPorts(Arrays.asList(ports.split(",")));
-        }
-        service.setLaunchConfig(launchConfig);
-        Optional<Service> serviceInstance = rancherClient.createService(service, getEnvironmentId(), stack.getId());
-
-        if (!serviceInstance.isPresent()) {
-            throw new AbortException("upgrade service error");
-        }
-
-        waitUntilServiceStateIs(serviceInstance.get().getId(), ACTIVE, listener);
-    }
-
-    public boolean isConfirm() {
-        return confirm;
-    }
-
-    public boolean isStartFirst() {
-        return startFirst;
-    }
-
-    public String getEnvironments() {
-        return environments;
-    }
-
-    public String getImage() {
-        return image;
-    }
-
-    public String getPorts() {
-        return ports;
-    }
-
-    @Symbol("rancher")
+    @Symbol("confirm")
     @Extension // This indicates to Jenkins that this is an implementation of an extension point.
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
-
         private static final CredentialsUtil credentialsUtil = new CredentialsUtil();
 
         public DescriptorImpl() {
@@ -199,7 +115,7 @@ public class RancherBuilder extends AbstractRancherBuilder {
         }
 
         public String getDisplayName() {
-            return "Deploy/Upgrade Rancher Service";
+            return "Finish Rancher Service Upgrade";
         }
 
         @Override
@@ -246,21 +162,6 @@ public class RancherBuilder extends AbstractRancherBuilder {
             return value > 0 ? FormValidation.ok() : FormValidation.error("Time should be at least 1");
         }
 
-        public FormValidation doCheckPorts(@QueryParameter String value) {
-            if (Strings.isNullOrEmpty(value)) {
-                return FormValidation.ok();
-            }
-
-            String[] ports = value.split(",");
-            boolean inValid = Arrays.asList(ports)
-                    .stream()
-                    .anyMatch(
-                            port -> Arrays.asList(port.split(":"))
-                                    .stream()
-                                    .anyMatch(part -> !StringUtils.isNumeric(part)));
-            return inValid ? FormValidation.error("Ports config should be like: 8080:8080,8181:8181") : FormValidation.ok();
-        }
-
         public FormValidation doCheckCredentialId(@QueryParameter String value) {
             return !Strings.isNullOrEmpty(value)
                     && credentialsUtil.getCredential(value).isPresent()
@@ -291,10 +192,6 @@ public class RancherBuilder extends AbstractRancherBuilder {
         public FormValidation doCheckService(@QueryParameter String value) {
             boolean validate = !Strings.isNullOrEmpty(value) && value.contains("/") && value.split("/").length == 2;
             return validate ? FormValidation.ok() : FormValidation.error("Service name should be like stack/service");
-        }
-
-        public FormValidation doCheckImage(@QueryParameter String value) {
-            return !Strings.isNullOrEmpty(value) ? FormValidation.ok() : FormValidation.error("Docker image can't be empty");
         }
 
     }

@@ -78,16 +78,16 @@ public class RancherBuilder extends AbstractRancherBuilder {
 
         String dockerUUID = String.format("docker:%s", Parser.paraser(image, buildEnvironments));
 
-        String envid=Parser.paraser(getEnvironmentId(), buildEnvironments);
+        environmentIdParsed = Parser.paraser(environmentId, buildEnvironments);
         initializeClient(Parser.paraser(endpoint, buildEnvironments));
 
         String service = Parser.paraser(this.getService(), buildEnvironments);
         ServiceField serviceField = new ServiceField(service);
 
-        listener.getLogger().printf("Deploy/Upgrade image[%s] to service [%s] to rancher environment [%s/projects/%s]%n", dockerUUID, service, endpoint, envid);
+        listener.getLogger().printf("Deploy/Upgrade image[%s] to service [%s] to rancher environment [%s/projects/%s]%n", dockerUUID, service, endpoint, environmentIdParsed);
 
         Stack stack = getStack(listener, serviceField, rancherClient, true);
-        Optional<Services> services = rancherClient.services(envid, stack.getId());
+        Optional<Services> services = rancherClient.services(environmentIdParsed, stack.getId());
         if (!services.isPresent()) {
             throw new AbortException("Error happen when fetch stack<" + stack.getName() + "> services");
         }
@@ -128,7 +128,7 @@ public class RancherBuilder extends AbstractRancherBuilder {
 
         inServiceStrategy.setLaunchConfig(launchConfig);
         serviceUpgrade.setInServiceStrategy(inServiceStrategy);
-        Optional<Service> serviceInstance = rancherClient.upgradeService(getEnvironmentId(), service.getId(), serviceUpgrade);
+        Optional<Service> serviceInstance = rancherClient.upgradeService(environmentIdParsed, service.getId(), serviceUpgrade);
         if (!serviceInstance.isPresent()) {
             throw new AbortException("upgrade service error");
         }
@@ -139,7 +139,7 @@ public class RancherBuilder extends AbstractRancherBuilder {
             return;
         }
 
-        rancherClient.finishUpgradeService(environmentId, serviceInstance.get().getId());
+        rancherClient.finishUpgradeService(environmentIdParsed, serviceInstance.get().getId());
         waitUntilServiceStateIs(serviceInstance.get().getId(), ACTIVE, listener);
     }
 
@@ -154,7 +154,7 @@ public class RancherBuilder extends AbstractRancherBuilder {
             launchConfig.setPorts(Arrays.asList(ports.split(",")));
         }
         service.setLaunchConfig(launchConfig);
-        Optional<Service> serviceInstance = rancherClient.createService(service, getEnvironmentId(), stack.getId());
+        Optional<Service> serviceInstance = rancherClient.createService(service, environmentIdParsed, stack.getId());
 
         if (!serviceInstance.isPresent()) {
             throw new AbortException("upgrade service error");

@@ -14,7 +14,7 @@ import jenkins.plugins.rancher.util.CredentialsUtil;
 import jenkins.plugins.rancher.util.EnvironmentParser;
 import jenkins.plugins.rancher.util.ServiceField;
 import jenkins.tasks.SimpleBuildStep;
-
+import org.jfree.util.Log;
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.HashMap;
@@ -29,6 +29,7 @@ public abstract class AbstractRancherBuilder extends Builder implements SimpleBu
     protected int timeout = 50;
     protected RancherClient rancherClient;
     protected CredentialsUtil credentialsUtil;
+    protected String environmentIdParsed;
 
     public AbstractRancherBuilder(String environmentId, String endpoint, String credentialId, String service, int timeout) {
         this.environmentId = environmentId;
@@ -103,7 +104,7 @@ public abstract class AbstractRancherBuilder extends Builder implements SimpleBu
         try {
             boolean success = false;
             while ((current - start) < timeoutMs) {
-                Optional<Service> checkService = rancherClient.service(environmentId, serviceId);
+                Optional<Service> checkService = rancherClient.service(environmentIdParsed, serviceId);
                 String state = checkService.get().getState();
                 if (state.equalsIgnoreCase(targetState)) {
                     listener.getLogger().println("current service state is " + targetState);
@@ -121,14 +122,10 @@ public abstract class AbstractRancherBuilder extends Builder implements SimpleBu
         }
     }
 
-    public String getEnvironmentId() {
-        return environmentId;
-    }
-
     protected Stack getStack(@Nonnull TaskListener listener, ServiceField serviceField, RancherClient rancherClient, boolean createIfNotExists) throws IOException {
-        Optional<Stacks> stacks = rancherClient.stacks(getEnvironmentId());
+        Optional<Stacks> stacks = rancherClient.stacks(environmentIdParsed);
         if (!stacks.isPresent()) {
-            throw new AbortException("error happen when fetch stack in environment<" + getEnvironmentId() + ">");
+            throw new AbortException("error happen when fetch stack in environment<" + environmentIdParsed + ">");
         }
 
         Optional<Stack> stack = stacks.get().getData().stream().filter(stackItem -> isEqual(serviceField, stackItem)).findAny();
@@ -146,7 +143,7 @@ public abstract class AbstractRancherBuilder extends Builder implements SimpleBu
     private Stack createStack(ServiceField serviceField, RancherClient rancherClient) throws IOException {
         Stack stack = new Stack();
         stack.setName(serviceField.getStackName());
-        Optional<Stack> stackOptional = rancherClient.createStack(stack, getEnvironmentId());
+        Optional<Stack> stackOptional = rancherClient.createStack(stack, environmentIdParsed);
         if (!stackOptional.isPresent()) {
             throw new AbortException("error happen when create stack");
         } else {

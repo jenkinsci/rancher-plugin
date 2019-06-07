@@ -7,6 +7,11 @@ import hudson.EnvVars;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.tasks.Builder;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import javax.annotation.Nonnull;
 import jenkins.plugins.rancher.entity.Service;
 import jenkins.plugins.rancher.entity.Stack;
 import jenkins.plugins.rancher.entity.Stacks;
@@ -14,12 +19,6 @@ import jenkins.plugins.rancher.util.CredentialsUtil;
 import jenkins.plugins.rancher.util.EnvironmentParser;
 import jenkins.plugins.rancher.util.ServiceField;
 import jenkins.tasks.SimpleBuildStep;
-import org.jfree.util.Log;
-import javax.annotation.Nonnull;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
 
 public abstract class AbstractRancherBuilder extends Builder implements SimpleBuildStep {
     protected final String environmentId;
@@ -158,6 +157,10 @@ public abstract class AbstractRancherBuilder extends Builder implements SimpleBu
     public String getEndpoint() {
         return endpoint;
     }
+
+    public String getEnvironmentId() {
+      return environmentId;
+  }
 
     public String getCredentialId() {
         return credentialId;

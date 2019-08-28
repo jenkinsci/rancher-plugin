@@ -64,16 +64,16 @@ public class RancherUpgradeBuilder extends AbstractRancherBuilder {
     public void perform(@Nonnull Run<?, ?> build, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws InterruptedException, IOException {
         Map<String, String> buildEnvironments = getBuildEnvs(build, listener);
 
-        String envid=Parser.paraser(getEnvironmentId(), buildEnvironments);
+        environmentIdParsed = Parser.paraser(environmentId, buildEnvironments);
         initializeClient(Parser.paraser(endpoint, buildEnvironments));
 
         String service = Parser.paraser(this.getService(), buildEnvironments);
         ServiceField serviceField = new ServiceField(service);
 
-        listener.getLogger().printf("Finish[%s] upgraded service [%s] to rancher environment [%s/projects/%s]%n", finishAction, service, endpoint, envid);
+        listener.getLogger().printf("Finish[%s] upgraded service [%s] to rancher environment [%s/projects/%s]%n", finishAction, service, endpoint, environmentIdParsed);
 
         Stack stack = getStack(listener, serviceField, rancherClient, false);
-        Optional<Services> services = rancherClient.services(envid, stack.getId());
+        Optional<Services> services = rancherClient.services(environmentIdParsed, stack.getId());
         if (!services.isPresent()) {
             throw new AbortException("Error happen when fetch stack<" + stack.getName() + "> services");
         }
@@ -86,7 +86,7 @@ public class RancherUpgradeBuilder extends AbstractRancherBuilder {
                 throw new AbortException("Before confirming service the service instance state should be 'UPGRADED'");
             }
             if (ROLLBACK_ACTION.equalsIgnoreCase(finishAction)) {
-                rancherClient.rollbackUpgradeService(environmentId, serviceInstance.get().getId());
+                rancherClient.rollbackUpgradeService(environmentIdParsed, serviceInstance.get().getId());
             } else {
                 rancherClient.finishUpgradeService(environmentId, serviceInstance.get().getId());
             }

@@ -70,7 +70,7 @@ Or Download the latest version of plugin from [releases][https://github.com/jenk
 > Deploy or Upgrade Service Instance
 
 1. Create a new free-style project
-2. Ensure. via whatever build stepds you need, tha the Docker image you want to deploy to Rancher will be available in the docker registry
+2. Ensure. via whatever build steps you need, that the Docker image you want to deploy to Rancher will be available in the docker registry
 3. Add "Deploy/Upgrade Rancher Service" post-build action
 4. Enter the target Rancher Service API endpoint, e.g 'http://rancher-server/v2-beta'
 5. Select the credential name from the drop-down list
